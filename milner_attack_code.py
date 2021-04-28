@@ -16,11 +16,16 @@ class Milner_attack:
         return
 
     def implement_attack(self):
+        affine_map = self.H.create_affine_sum(self.rm)
+        for value in affine_map.keys():
+            print(value, ":", affine_map[value])
         count = self.H.find_binom_border(self.rm.r, self.rm.m)
+        print("count = ", count)
         min_weight_words = self.find_monom_minimal_weight_words(count)
+        print("len_min_weight_words = ", len(min_weight_words))
         if (len(min_weight_words) < count):
             print("Can't find enough min_weight_words")
-            return
+            return [None, None]
         print("Start attack:")
         basic_boolean_functions = self.create_r_minus_1_basic(min_weight_words, self.rm.r)
         if (self.rm.r == 2):
@@ -68,6 +73,7 @@ class Milner_attack:
             msg = H.convert_decimal_to_binary(dig, rm.k)
             enc_msg = H.mult_vector_for_matrix(msg, G_pub)
             if H.calculate_weight_for_vector(enc_msg) == min_weight:
+                #print("enc_msg = ", enc_msg)
                 flag = self.find_enc_msg_in_base_code(enc_msg)
                 if flag == True:
                     return [dig, "yes"]

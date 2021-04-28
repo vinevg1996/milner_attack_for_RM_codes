@@ -14,6 +14,24 @@ H.print_matrix(ext_rm_R_T, "ext_rm_R_T")
 """
 
 class Help:
+    def neg(self, vec):
+        neg_vec = [((vec[i] + 1) % 2) for i in range(0, len(vec))]
+        return neg_vec
+
+    def xor(self, vec1, vec2):
+        vec = [(vec1[i] + vec2[i]) % 2 for i in range(0, len(vec1))]
+        return vec
+
+    def create_affine_sum(self, rm):
+        affine_map = dict()
+        const_one = [1 for i in range(0, rm.n)]
+        RM = list(rm.matrix_by_row)
+        for i in range(1, rm.m + 1):
+            affine_map[str(RM[i])] = [i - 1]
+            neg_RM_i = self.xor(RM[i], const_one)
+            affine_map[str(neg_RM_i)] = [i - 1, -1]
+        return affine_map
+
     def extend_tup_matrix_to_n_n(self, tup_matrix, m, n):
         # m < n
         new_matrix = list()
@@ -49,7 +67,7 @@ class Help:
         sum_binom = 0
         for j in range(0, r):
             sum_binom += self.binom_calc(m, j)
-        iter_size = 2**(r-1)
+        iter_size = 2**r - 1
         if sum_binom % iter_size == 0:
             return sum_binom // iter_size
         else:
@@ -165,10 +183,6 @@ class Help:
                 j = j + 1
             i = i + 1
         return curr_list
-
-    def xor(self, vec1, vec2):
-        vec = [(vec1[i] + vec2[i]) % 2 for i in range(0, len(vec1))]
-        return vec
 
     def calculate_weight_for_vector(self, vector):
         weight = vector.count(1)
