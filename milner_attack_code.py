@@ -16,12 +16,13 @@ class Milner_attack:
         return
 
     def implement_attack(self):
-        affine_map = self.H.create_affine_sum(self.rm)
-        for value in affine_map.keys():
-            print(value, ":", affine_map[value])
+        self.min_word_base = self.H.create_min_word_base(self.rm)
         count = self.H.find_binom_border(self.rm.r, self.rm.m)
         print("count = ", count)
         min_weight_words = self.find_monom_minimal_weight_words(count)
+        print("min_weight_words:")
+        print(min_weight_words[0])
+        print(min_weight_words[1])
         print("len_min_weight_words = ", len(min_weight_words))
         if (len(min_weight_words) < count):
             print("Can't find enough min_weight_words")
@@ -55,14 +56,13 @@ class Milner_attack:
             if answer == "yes":
                 msg = H.convert_decimal_to_binary(dig, self.rm.k)
                 enc_msg = H.mult_vector_for_matrix(msg, self.G_pub)
-                index = self.rm.matrix_by_row.index(enc_msg)
-                min_weight_words.append([enc_msg, index])
+                func_vars = self.min_word_base[str(enc_msg)]
+                min_weight_words.append([enc_msg, func_vars])
                 start_id = dig + 1
         return min_weight_words
 
-    def find_enc_msg_in_base_code(self, enc_msg):
-        if (enc_msg in self.rm.matrix_by_row):
-            index = self.rm.matrix_by_row.index(enc_msg)
+    def find_enc_msg_in_min_word_base(self, enc_msg):
+        if (str(enc_msg) in self.min_word_base.keys()):
             return True
         return False
 
@@ -73,8 +73,7 @@ class Milner_attack:
             msg = H.convert_decimal_to_binary(dig, rm.k)
             enc_msg = H.mult_vector_for_matrix(msg, G_pub)
             if H.calculate_weight_for_vector(enc_msg) == min_weight:
-                #print("enc_msg = ", enc_msg)
-                flag = self.find_enc_msg_in_base_code(enc_msg)
+                flag = self.find_enc_msg_in_min_word_base(enc_msg)
                 if flag == True:
                     return [dig, "yes"]
         return [dig, "no"]
@@ -88,8 +87,8 @@ class Milner_attack:
         curr_basic_vectors = 0
         for i in range(0, len(min_weight_words)):
             min_weight_word = list(min_weight_words[i][0])
-            index = int(min_weight_words[i][1])
-            boolean_functions = self.create_basic_vectors(min_weight_word, index, r)
+            func_vars = list(min_weight_words[i][1])
+            boolean_functions = self.create_vectors_for_basis(min_weight_word, func_vars)
             if (curr_basic_vectors + len(boolean_functions) < count_basic_vectors):
                 for boolean_function in boolean_functions:
                     basic_boolean_functions.append(list(boolean_function))
@@ -102,7 +101,12 @@ class Milner_attack:
                     curr_basic_vectors += 1
         return basic_boolean_functions
 
-    def create_basic_vectors(self, min_weight_word, index, r):
+    def create_vectors_for_basis(self, min_weight_word, func_vars):
+        alpha_one = [1 for i in range(0, self.rm.r)]
+        self.H.solve_linear_eq(alpha_one)
+        return
+
+    def create_basic_vectors(self, min_weight_word, func_vars, r):
         H = Help()
         comb = Combinatorics()
         allCombinations = list()
@@ -203,3 +207,25 @@ class Milner_attack:
         check_G_pub = H.mult_matrix_for_matrix(matrix_1, M_P)
         print(check_G_pub == self.G_pub)
         return
+
+"""
+x0 = self.rm.matrix_by_row[1]
+x1 = self.rm.matrix_by_row[2]
+x2 = self.rm.matrix_by_row[3]
+x3 = self.rm.matrix_by_row[4]
+print("x1 =", x1)
+print("x0 =", x0)
+print("x2 =", x2)
+print("x3 =", x3)
+neg_x1 = self.H.neg(x1)
+vec = self.H.xor(x0, x2)
+vec = self.H.xor(vec, x3)
+print("vec =", vec)
+print("____vec =", vec)
+print("neg__x1 =", neg_x1)
+const_one = [1 for i in range(0, rm.n)]
+mult_vec = list(const_one)
+mult_vec = self.H.mult(mult_vec, neg_x1)
+mult_vec = self.H.mult(mult_vec, vec)
+print("multVec =", mult_vec)
+"""

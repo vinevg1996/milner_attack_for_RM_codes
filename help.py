@@ -14,6 +14,9 @@ H.print_matrix(ext_rm_R_T, "ext_rm_R_T")
 """
 
 class Help:
+    def solve_linear_eq(self, func_vars):
+        return
+
     def neg(self, vec):
         neg_vec = [((vec[i] + 1) % 2) for i in range(0, len(vec))]
         return neg_vec
@@ -22,15 +25,52 @@ class Help:
         vec = [(vec1[i] + vec2[i]) % 2 for i in range(0, len(vec1))]
         return vec
 
-    def create_affine_sum(self, rm):
-        affine_map = dict()
+    def mult(self, vec1, vec2):
+        vec = [(vec1[i] * vec2[i]) % 2 for i in range(0, len(vec1))]
+        return vec
+
+    def create_min_word_base(self, rm):
+        affine_func_value_list = list()
+        affine_vars_list = list()
         const_one = [1 for i in range(0, rm.n)]
         RM = list(rm.matrix_by_row)
         for i in range(1, rm.m + 1):
-            affine_map[str(RM[i])] = [i - 1]
-            neg_RM_i = self.xor(RM[i], const_one)
-            affine_map[str(neg_RM_i)] = [i - 1, -1]
-        return affine_map
+            affine_func_value_list.append(RM[i])
+            affine_vars_list.append([i - 1])
+            neg_RM_i = self.neg(RM[i])
+            affine_func_value_list.append(neg_RM_i)
+            affine_vars_list.append([-1, i - 1])
+        for i in range(1, rm.m + 1):
+            for j in range(i + 1, rm.m + 1):
+                vec = self.xor(RM[i], RM[j])
+                affine_func_value_list.append(vec)
+                affine_vars_list.append([i - 1, j - 1])
+                neg_vec = self.neg(vec)
+                affine_func_value_list.append(vec)
+                affine_vars_list.append([-1, i - 1, j - 1])
+        for i in range(1, rm.m + 1):
+            for j in range(i + 1, rm.m + 1):
+                for k in range(j + 1, rm.m + 1):
+                    vec = self.xor(RM[i], RM[j])
+                    vec = self.xor(vec, RM[k])
+                    affine_func_value_list.append(vec)
+                    affine_vars_list.append([i-1, j-1, k-1])
+                    neg_vec = self.neg(vec)
+                    affine_func_value_list.append(neg_vec)
+                    affine_vars_list.append([-1, i-1, j-1, k-1])
+        size = len(affine_func_value_list)
+        comb = Combinatorics()
+        allCombinations = list()
+        comb.GenerationAllCombinations(allCombinations, size, rm.r)
+        min_word_base = dict()
+        for curr_comb in allCombinations:
+            func_value = list(const_one)
+            func_vars = list()
+            for number in curr_comb:
+                func_value = self.mult(func_value, affine_func_value_list[number])
+                func_vars.append(affine_vars_list[number])
+            min_word_base[str(func_value)] = func_vars
+        return min_word_base
 
     def extend_tup_matrix_to_n_n(self, tup_matrix, m, n):
         # m < n
