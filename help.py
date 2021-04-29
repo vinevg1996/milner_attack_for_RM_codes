@@ -2,6 +2,7 @@
 from combinatorics import Combinatorics
 import numpy as np
 import galois
+import random
 
 """
 ext_rm_R_T = list()
@@ -13,9 +14,142 @@ ext_rm_R_T[7][7] = 1
 H.print_matrix(ext_rm_R_T, "ext_rm_R_T")
 """
 
-class Help:
-    def solve_linear_eq(self, func_vars):
+class SLAU:
+    def find_first_one_in_col(self, matrix, col):
+        for i in range(col, len(matrix)):
+            if matrix[i][col] == 1:
+                return i
+        return -1
+
+    def xor_lines(self, M, row):
+        H = Help()
+        for i in range(row + 1, len(M)):
+            if M[i][row] == 1:
+                M[i] = H.xor(M[row], M[i])
         return
+
+    def check_eq(self, A_tup, b, x):
+        H = Help()
+        A = list()
+        for row in A_tup:
+            A.append(list(row))
+        Ax = H.mult_matrix_for_vector(A, x)
+        #print("x = ", x)
+        #print("Ax = ", Ax)
+        #print("b  = ", b)
+        return (Ax == b)
+
+    def gauss(self, A_tup, b):
+        H = Help()
+        M = list()
+        for row in A_tup:
+            M.append(list(row))
+        #H.print_matrix(M, "M1")
+        n = len(M)
+        k = len(M[0])
+        for i in range(0, len(b)):
+            M[i].append(b[i])
+        #H.print_matrix(M, "M2")
+        for it in range(0, k):
+            row = self.find_first_one_in_col(M, it)
+            if row != -1:
+                #print("row = ", row)
+                line = list(M[row])
+                M[row] = list(M[it])
+                M[it] = list(line)
+                self.xor_lines(M, it)
+                #H.print_matrix(M, "M_it")
+        #H.print_matrix(M, "M")
+        square_matrix = list()
+        b = list()
+        for i in range(0, k):
+            square_matrix.append(M[i][0:len(M[i])-1])
+            b.append(M[i][len(M[i])-1])
+        #H.print_matrix(square_matrix, "square_matrix")
+        #print("b = ", b)
+        GF2 = galois.GF(2)
+        A_galue = GF2(square_matrix)
+        b_galue = GF2(b)
+        x = np.linalg.solve(A_galue, b_galue)
+        list_x = list(np.array(x))
+        #print("x = ", list_x)
+        return list_x
+
+class Help:
+    def choose_independend(self, vectors, rm):
+        #print("len = ", len(vectors))
+        count = rm.k - self.binom_calc(rm.m, rm.r)
+        #print("count = ", count)
+        comb = Combinatorics()
+        allCombinations = list()
+        comb.GenerationAllCombinations(allCombinations, len(vectors), count)
+        for comb in allCombinations:
+            matrix = list()
+            for number in comb:
+                matrix.append(list(vectors[number]))
+            flag = self.calculate_determenant(matrix)
+            #print("flag = ", flag)
+            if flag == True:
+                #print("flag = ", flag)
+                return matrix
+        #print("Can't find")
+        return None
+
+    def create_g_alpha(self, rm, enc_msg, func_eqs, alpha):
+        #self.print_matrix(func_eqs, "func_eqs")
+        const_one = [1 for i in range(0, rm.n)]
+        const_zero = [0 for i in range(0, rm.n)]
+        rem_func = list(const_one)
+        for i in range(0, len(func_eqs)):
+            func_eq = list(func_eqs[i])
+            if func_eq[0] == -1:
+                const = 0
+                start_id = 1
+            else:
+                const = 1
+                start_id = 0
+            if alpha[i] == 1:
+                const = (const + 1) % 2
+            curr_func = list(const_zero)
+            for j in range(start_id, len(func_eq)):
+                x = int(func_eq[j])
+                curr_func = self.xor(curr_func, rm.matrix_by_row[x + 1])
+            if const == 1:
+                curr_func = self.neg(curr_func)
+            rem_func = self.mult(rem_func, curr_func)
+        res_func = self.xor(enc_msg, curr_func)
+        return res_func
+
+    def solve_linear_eq(self, rm, func_eqs, alpha):
+        size = 2**rm.m
+        V_supp = list()
+        for dig in range(0, size):
+            flag = True
+            vars_value = self.convert_decimal_to_binary(dig, rm.m)
+            i = 0
+            while (i < len(func_eqs)) and (flag):
+                if (func_eqs[i][0] == -1):
+                    value = (alpha[i] + 1) % 2
+                    start_id = 1
+                else:
+                    value = int(alpha[i])
+                    start_id = 0
+                sum_eq = 0
+                for j in range(start_id, len(func_eqs[i])):
+                    x = int(func_eqs[i][j])
+                    sum_eq = (sum_eq + vars_value[x]) % 2
+                if sum_eq != value:
+                    flag = False
+                i = i + 1
+            if flag == True:
+                V_supp.append(list(vars_value))
+        return V_supp
+
+    def reverse_vector(self, vec):
+        new_vec = [0 for i in range(0, len(vec))]
+        for i in range(0, len(vec)):
+            new_vec[i] = int(vec[len(vec) - i - 1])
+        return new_vec
 
     def neg(self, vec):
         neg_vec = [((vec[i] + 1) % 2) for i in range(0, len(vec))]
@@ -72,17 +206,51 @@ class Help:
             min_word_base[str(func_value)] = func_vars
         return min_word_base
 
-    def extend_tup_matrix_to_n_n(self, tup_matrix, m, n):
+    def extend_gen_matrix_to_n_n(self, rm):
+        RM = list(rm.matrix_by_row)
+        GF2 = galois.GF(2)
+        for i in range(rm.k, rm.n):
+            print("i = ", i)
+            line = [random.randint(0, 1) for i in range(0, rm.n)]
+            full_rank_flag = False
+            while not(full_rank_flag):
+                matrix = list(RM)
+                matrix.append(line)
+                GF2_matrix = GF2(matrix)
+                rank = np.linalg.matrix_rank(GF2_matrix)
+                if (rank == len(matrix)):
+                    RM.append(line)
+                    full_rank_flag = True
+        self.print_matrix(RM, "RM")
+        tup_matrix = list(zip(*RM))
+        new_matrix = list()
+        for tup in tup_matrix:
+            new_matrix.append(list(tup))
+        return new_matrix
+
+    def extend_tup_matrix_to_n_n(self, rm):
         # m < n
         new_matrix = list()
         for tup in tup_matrix:
             new_matrix.append(list(tup))
+        GF2 = galois.GF(2)
+        GF2_matrix = GF2(new_matrix)
+        rank = np.linalg.matrix_rank(GF2_matrix)
+        print("rank = ", rank)
+        print("len_0 = ", len(new_matrix[0]))
         self.print_matrix(new_matrix, "new_matrix")
         for j in range(m, n):
             for i in range(0, n):
                 new_matrix[i].append(0)
-            new_matrix[j][j] = 1
-        self.print_matrix(new_matrix, "new_matrix")
+        #self.print_matrix(new_matrix, "new_matrix1")
+        for i in range(m, n):
+            #for k in range(i, n):
+            new_matrix[i][i] = 1
+        self.print_matrix(new_matrix, "new_matrix2")
+        
+        GF2_matrix2 = GF2(new_matrix)
+        rank2 = np.linalg.matrix_rank(GF2_matrix2)
+        print("rank2 = ", rank2)
         return new_matrix
 
     def calculate_determenant(self, matrix):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 import random
-from help import Help
+from help import *
 from combinatorics import Combinatorics
 from reedmuller import reedmuller
 from attack_for_r_equal_one import Attack_for_r_equal_one
@@ -15,9 +15,39 @@ class Milner_attack:
         self.G_pub = G_pub
         return
 
+    def bool_funcs_from_min_weight_word(self, enc_msg, func_vars):
+
+        return
+
+    def find_minimal_weight_monoms(self, count_base_vectors):
+        min_weight_words = list()
+        enough_vectors = False
+        start_id = 1
+        while not(enough_vectors):
+            [dig, answer] = self.find_minimal_weight_word(self.rm, self.G_pub, start_id)
+            if answer == "yes":
+                msg = H.convert_decimal_to_binary(dig, self.rm.k)
+                enc_msg = H.mult_vector_for_matrix(msg, self.G_pub)
+                func_vars = self.min_word_base[str(enc_msg)]
+                #min_weight_words.append([enc_msg, func_vars])
+                min_weight_word = list(min_weight_words[i][0])
+                func_vars = list(min_weight_words[i][1])
+                boolean_functions = self.create_vectors_for_basis(min_weight_word, func_vars)
+                bool_funcs = self.bool_funcs_from_min_weight_word(enc_msg, func_vars)
+                
+                start_id = dig + 1
+        return
+
+    def create_basis_for_r_minus_1(self):
+        self.min_word_base = self.H.create_min_word_base(self.rm)
+        min_weight_words = self.find_monom_minimal_weight_words(count)
+
+        return
+
     def implement_attack(self):
         self.min_word_base = self.H.create_min_word_base(self.rm)
-        count = self.H.find_binom_border(self.rm.r, self.rm.m)
+        #count = self.H.find_binom_border(self.rm.r, self.rm.m)
+        count = 4
         print("count = ", count)
         min_weight_words = self.find_monom_minimal_weight_words(count)
         print("min_weight_words:")
@@ -43,6 +73,7 @@ class Milner_attack:
             for elem in inverse_permutation:
                 index = inverse_permutation.index(elem)
                 M_P_inv[elem][index] = 1
+            self.H.print_matrix(M_P_inv, "M_P_inv")
             recover_sk_M = self.find_M_with_linalg(M_P_inv)
             return [recover_sk_M, M_P]
         return
@@ -89,22 +120,35 @@ class Milner_attack:
             min_weight_word = list(min_weight_words[i][0])
             func_vars = list(min_weight_words[i][1])
             boolean_functions = self.create_vectors_for_basis(min_weight_word, func_vars)
-            if (curr_basic_vectors + len(boolean_functions) < count_basic_vectors):
-                for boolean_function in boolean_functions:
-                    basic_boolean_functions.append(list(boolean_function))
-                curr_basic_vectors += len(boolean_functions)
-            else:
-                j = 0
-                while curr_basic_vectors < count_basic_vectors:
-                    basic_boolean_functions.append(list(boolean_functions[j]))
-                    j = j + 1
-                    curr_basic_vectors += 1
-        return basic_boolean_functions
+            self.H.print_matrix(boolean_functions, "boolean_functions")
+            for bool_func in boolean_functions:
+                basic_boolean_functions.append(bool_func)
+        print("independend_bool_func:")
+        independend_bool_func = self.H.choose_independend(basic_boolean_functions, self.rm)
+        return independend_bool_func
 
     def create_vectors_for_basis(self, min_weight_word, func_vars):
+        boolean_functions = list()
         alpha_one = [1 for i in range(0, self.rm.r)]
-        self.H.solve_linear_eq(alpha_one)
-        return
+        V_supp_one = self.H.solve_linear_eq(self.rm, func_vars, alpha_one)
+        print("V_supp_one = ", V_supp_one)
+        pat_boolean_function = [0 for i in range(0, self.rm.n)]
+        for bool_set in V_supp_one:
+            rev_bool_set = self.H.reverse_vector(bool_set)
+            index = self.H.convert_binary_to_decimal(rev_bool_set, len(rev_bool_set))
+            pat_boolean_function[index] = 1
+        size = 2**self.rm.r - 1
+        for dig in range(0, size):
+            alpha = self.H.convert_decimal_to_binary(dig, self.rm.r)
+            V_supp = self.H.solve_linear_eq(self.rm, func_vars, alpha)
+            print("V_supp = ", V_supp)
+            boolean_function = list(pat_boolean_function)
+            for bool_set in V_supp:
+                rev_bool_set = self.H.reverse_vector(bool_set)
+                index = self.H.convert_binary_to_decimal(rev_bool_set, len(rev_bool_set))
+                boolean_function[index] = 1
+            boolean_functions.append(boolean_function)
+        return boolean_functions
 
     def create_basic_vectors(self, min_weight_word, func_vars, r):
         H = Help()
@@ -162,16 +206,14 @@ class Milner_attack:
     def find_M_with_linalg(self, M_P_inv):
         H = Help()
         B = H.mult_matrix_for_matrix(self.G_pub, M_P_inv)
-        GF2 = galois.GF(2)
-        ext_rm_R_T = H.extend_tup_matrix_to_n_n(self.rm.M, self.rm.k, self.rm.n)
-        ext_rm_M = GF2(ext_rm_R_T)
+        #H.print_matrix(B, "B")
+        #H.print_matrix(self.rm.matrix_by_row, "matrix_by_row")
+        slau = SLAU()
         sk_M = list()
         for i in range(0, self.rm.k):
-            b = GF2(B[i])
-            x = np.linalg.solve(ext_rm_M, b)
-            x_list = list(np.array(x))
-            sk_M.append(x_list[0:self.rm.k])
-            #print("i = ", i, np.array(x))
+            x = slau.gauss(self.rm.M, B[i])
+            sk_M.append(x)
+            print("i = ", i, ": x = ", x)
         H.print_matrix(sk_M, "sk_M")
         return sk_M
 

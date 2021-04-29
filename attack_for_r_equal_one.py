@@ -14,7 +14,7 @@ class Attack_for_r_equal_one:
     def implement_attack(self):
         H = Help()
         a_vec = self.find_a()
-        print("a_vec = ", a_vec)
+        #print("a_vec = ", a_vec)
         A_matrix = self.create_A(a_vec)
         permutation = self.find_permutation(A_matrix)
         return permutation
@@ -39,7 +39,7 @@ class Attack_for_r_equal_one:
             A_matrix_raw[i] = 1
             A_matrix.append(A_matrix_raw)
         index = a_vec.index(1)
-        print("index = ", index)
+        #print("index = ", index)
         A_matrix[index + 1][0] = 1
         A_matrix[index + 1][index + 1] = 0
         return A_matrix
@@ -49,12 +49,14 @@ class Attack_for_r_equal_one:
         AG_pub_one = H.mult_matrix_for_matrix(A_matrix, self.G_pub_one)
         rm_1 = reedmuller.ReedMuller(1, self.rm.m)
         permutation = [0 for i in range(0, self.rm.n)]
+        """
         print("RM(1, m):")
         for rm_1_raw in rm_1.matrix_by_row:
             print(rm_1_raw)
         print("AG_pub_one:")
         for AG_pub_one_raw in AG_pub_one:
             print(AG_pub_one_raw)
+        """
         transpose_AG_pub_one = list(zip(*AG_pub_one))
         j = 0
         for rm_1_transpose_raw in rm_1.M:
